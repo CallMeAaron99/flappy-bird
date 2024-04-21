@@ -1,39 +1,43 @@
-const birdElem = document.querySelector("[data-bird]")
-const BIRD_SPEED = .5
-const JUMP_DURATION = 125
 
-let timeSinceLastFly = Number.POSITIVE_INFINITY
-
-export function setupBird() {
-    setTop(window.innerHeight / 2)
-    document.removeEventListener("keydown", handelFly)
-    document.addEventListener("keydown", handelFly)
-}
-
-export function updateBird(delta) {
-    if (timeSinceLastFly < JUMP_DURATION) {
-        setTop(getTop() - BIRD_SPEED * delta) // Bird up
-    } else {
-        setTop(getTop() + BIRD_SPEED * delta) // Bird down
+export default class Bird {
+    constructor(speed, jump_duration) {
+        this.birdElem = document.getElementById("bird")
+        this.speed = speed
+        this.jump_duration = jump_duration
+        this.timeSinceLastFly = Number.POSITIVE_INFINITY
     }
+
+    reset() {
+        this.top = window.innerHeight / 2
+        document.removeEventListener("keydown", this.handelFly)
+        document.addEventListener("keydown", this.handelFly)
+    }
+
+    update(delta) {
+        if (this.timeSinceLastFly < this.jump_duration) {
+            this.top = this.top - this.speed * delta // Bird up
+        } else {
+            this.top = this.top + this.speed * delta // Bird down
+        }
     
-    timeSinceLastFly += delta
-}
+        this.timeSinceLastFly += delta
+    }
 
-export function getBirdRect() {
-    return birdElem.getBoundingClientRect()
-}
+    get top() {
+        return parseFloat(getComputedStyle(this.birdElem).getPropertyValue("--bird-top"))
+    }
 
-function setTop(top) {
-    birdElem.style.setProperty("--bird-top", top)
-}
+    set top(value) {
+        this.birdElem.style.setProperty("--bird-top", value)
+    }
 
-function getTop() {
-    return parseFloat(getComputedStyle(birdElem).getPropertyValue("--bird-top"))
-}
+    handelFly = (e) => {
+        if (e.code !== "Space") return
 
-function handelFly(e) {
-    if (e.code !== "Space") return
+        this.timeSinceLastFly = 0
+    }
 
-    timeSinceLastFly = 0
+    getRect() {
+        return this.birdElem.getBoundingClientRect()
+    }
 }

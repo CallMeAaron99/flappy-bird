@@ -1,88 +1,104 @@
-const HOLE_HEIGHT = 200
-const PIPE_WIDTH = 120
-const PIPE_INTERVAL = 1500 // Milliseconds
-const PIPE_SPEED = 0.75
+import { randomNumberBetween } from "./util.js"
 
-let pipes = []
-let timeSinceLastPipe = 0
-let passedPipeCount = 0
 
-export function setupPipes() {
-    document.documentElement.style.setProperty("--pipe-width", PIPE_WIDTH)
-    document.documentElement.style.setProperty("--hole-height", HOLE_HEIGHT)
-    pipes.forEach(pipe => pipe.remove())
-    timeSinceLastPipe = PIPE_INTERVAL // Spawn pipe immediately
-    passedPipeCount = 0
-}
-
-export function updatePipes(delta) {
-    timeSinceLastPipe += delta
-
-    if (timeSinceLastPipe > PIPE_INTERVAL) {
-        timeSinceLastPipe -= PIPE_INTERVAL
-        createPipe()
+export default class Pipes {
+    constructor(hole_height, width, interval, speed) {
+        this.width = width
+        this.hole_height = hole_height
+        this.interval = interval
+        this.speed = speed
+        this.timeSinceLastPipe = 0
+        this.passedPipeCount = 0
+        this.pipes = []
     }
 
-    pipes.forEach(pipe => {
-        if (pipe.left + PIPE_WIDTH < 0) {
-            passedPipeCount++
-            return pipe.remove()
+    reset() {
+        this.pipes.forEach(pipe => pipe.remove()) // Clear pipes
+        this.timeSinceLastPipe = this.interval // Spawn pipe immediately
+        this.passedPipeCount = 0
+    }
+
+    update(delta) {
+        this.timeSinceLastPipe += delta
+
+        // Spawn pipe when time reaches interval
+        if (this.timeSinceLastPipe > this.interval) {
+            this.timeSinceLastPipe -= this.interval
+            this.#createPipe()
         }
-        pipe.left = pipe.left - delta * PIPE_SPEED
-    })
+
+        // Update pipes position
+        this.pipes.forEach(pipe => {
+            // Remove pipes that are out of screen
+            if (pipe.left + pipe.width < 0) {
+                this.passedPipeCount++
+                this.pipes = this.pipes.filter(p => p !== pipe)
+                return pipe.remove()
+            }
+            pipe.left = pipe.left - delta * this.speed
+        })
+    }
+
+    getPipeRects() {
+        return this.pipes.flatMap(pipe => pipe.rects())
+    }
+
+    #createPipe() {
+        const pipe = new Pipe(this.hole_height, this.width)
+        pipe.left = window.innerWidth
+        this.pipes.push(pipe)
+    }
 }
 
-export function getPassedPipeCount() {
-    return passedPipeCount
-}
 
-export function getPipeRects() {
-    return pipes.flatMap(pipe => pipe.rects())
-}
+class Pipe {
+    constructor(hole_height, width) {
+        this.width = width
+        this.hole_height = hole_height
+        this.create()
+    }
 
-function createPipe() {
-    const pipeElem = document.createElement("div")
-    const topElem = createPipeSegment("top")
-    const bottomElem = createPipeSegment("bottom")
-    pipeElem.append(topElem)
-    pipeElem.append(bottomElem)
-    pipeElem.classList.add("pipe")
-    pipeElem.style.setProperty(
-        "--hole-top",
-        randomNumberBetween(
-            HOLE_HEIGHT * 1.5,
-            window.innerHeight - HOLE_HEIGHT * 0.5
+    create() {
+        this.pipeElem = document.createElement("div")
+        this.topElem = this.#createPipeSegment("top")
+        this.bottomElem = this.#createPipeSegment("bottom")
+        this.pipeElem.append(this.topElem)
+        this.pipeElem.append(this.bottomElem)
+        this.pipeElem.classList.add("pipe")
+        this.pipeElem.style.setProperty("--pipe-width", this.width)
+        this.pipeElem.style.setProperty("--hole-height", this.hole_height)
+        this.pipeElem.style.setProperty(
+            "--hole-top",
+            randomNumberBetween(
+                this.hole_height * 1.5,
+                window.innerHeight - this.hole_height * 0.5
+            )
         )
-    )
-    const pipe = {
-        get left() {
-            return parseFloat(getComputedStyle(pipeElem).getPropertyValue("--pipe-left"))
-        },
-        set left(value) {
-            pipeElem.style.setProperty("--pipe-left", value)
-        },
-        remove() {
-            pipes = pipes.filter(p => p !== pipe)
-            pipeElem.remove()
-        },
-        rects() {
-            return [
-                topElem.getBoundingClientRect(),
-                bottomElem.getBoundingClientRect(),
-            ]
-        }
+        document.body.append(this.pipeElem)
     }
-    pipe.left = window.innerWidth
-    document.body.append(pipeElem)
-    pipes.push(pipe)
-}
 
-function createPipeSegment(position) {
-    const segment = document.createElement("div")
-    segment.classList.add("segment", position)
-    return segment
-}
+    get left() {
+        return parseFloat(getComputedStyle(this.pipeElem).getPropertyValue("--pipe-left"))
+    }
 
-function randomNumberBetween(min, max) {
-    return Math.floor(Math.random() * (max - min + 1) + min)
+    set left(value) {
+        this.pipeElem.style.setProperty("--pipe-left", value)
+    }
+
+    remove() {
+        this.pipeElem.remove()
+    }
+
+    rects() {
+        return [
+            this.topElem.getBoundingClientRect(),
+            this.bottomElem.getBoundingClientRect(),
+        ]
+    }
+
+    #createPipeSegment(position) {
+        const segment = document.createElement("div")
+        segment.classList.add("segment", position)
+        return segment
+    }
 }

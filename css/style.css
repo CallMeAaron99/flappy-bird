@@ -29,7 +29,7 @@ body {
     display: none;
 }
 
-.bird {
+#bird {
     --bird-top: -1000;
     --bird-size: 60px;
     position: absolute;

@@ -1,9 +1,20 @@
-import { setupBird, updateBird, getBirdRect } from "./bird.js"
-import { getPassedPipeCount, getPipeRects, setupPipes, updatePipes } from "./pipe.js"
+import Bird from "./bird.js"
+import Pipes from "./pipe.js"
+import { isCollision } from "./util.js"
 
 document.addEventListener("keypress", handelStart, { once: true })
 const title = document.querySelector("[data-title]")
 const subtitle = document.querySelector("[data-subtitle]")
+
+const HOLE_HEIGHT = 200
+const PIPE_WIDTH = 120
+const PIPE_INTERVAL = 1500 // Milliseconds
+const PIPE_SPEED = 0.75
+const BIRD_SPEED = 0.5
+const JUMP_DURATION = 125
+
+const pipes = new Pipes(HOLE_HEIGHT, PIPE_WIDTH, PIPE_INTERVAL, PIPE_SPEED)
+const bird = new Bird(BIRD_SPEED, JUMP_DURATION)
 
 let lastTime = null
 
@@ -16,34 +27,25 @@ function updateLoop(time) {
     }
     const delta = time - lastTime
 
-    updateBird(delta)
-    updatePipes(delta)
-    if (checkLose()) return handelLose()
+    bird.update(delta)
+    pipes.update(delta)
+    if (isLose()) return handelLose()
 
     lastTime = time
     window.requestAnimationFrame(updateLoop)
 }
 
-function checkLose() {
-    const birdRect = getBirdRect()
-    const insidePipe = getPipeRects().some(rect => isCollision(birdRect, rect))
+function isLose() {
+    const birdRect = bird.getRect()
+    const insidePipe = pipes.getPipeRects().some(rect => isCollision(birdRect, rect))
     const outsideWorld = birdRect.top < 0 || birdRect.bottom > window.innerHeight
     return outsideWorld || insidePipe
 }
 
-function isCollision(rect1, rect2) {
-    return (
-        rect1.left < rect2.right &&
-        rect1.top < rect2.bottom &&
-        rect1.right > rect2.left &&
-        rect1.bottom > rect2.top
-    )
-}
-
 function handelStart() {
     title.classList.add("hide")
-    setupBird()
-    setupPipes()
+    bird.reset()
+    pipes.reset()
     lastTime = null
     window.requestAnimationFrame(updateLoop)
 }
@@ -52,7 +54,7 @@ function handelLose() {
     setTimeout(() => {
         title.classList.remove("hide")
         subtitle.classList.remove("hide")
-        subtitle.textContent = `${getPassedPipeCount()} Pipes`
+        subtitle.textContent = `${pipes.passedPipeCount} Pipes`
         document.addEventListener("keypress", handelStart, { once: true })
     }, 100)
 }
